@@ -27,7 +27,8 @@
 
 import streamlit as st
 from langchain_community.tools import DuckDuckGoSearchRun
-from llama_index import VectorStoreIndex, Document
+from llama_index import GPTSimpleVectorIndex, Document
+
 from huggingface_hub import InferenceClient
 
 # Initialize DuckDuckGoSearchRun and Hugging Face client
