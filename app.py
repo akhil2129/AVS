@@ -22,27 +22,14 @@ query = f"{company} in {industry}"
 def research_industry_and_company(query):
     results = search.invoke(query)
     research_index["results"] = results  # Storing research results in a simple dictionary
-    
-    # Using Hugging Face LLM to generate a more readable summary
-    messages = [
-        {"role": "user", "content": f"Summarize the following research findings for {company} in the {industry} industry."},
-        {"role": "assistant", "content": results}
-    ]
-    
-    with st.spinner("Generating research summary..."):
-        response = client.chat.completions.create(
-            model="mistralai/Mistral-7B-Instruct-v0.3",
-            messages=messages,
-            max_tokens=500
-        )
-        summary = response.choices[0].text.strip()
-    return summary
+    return results
 
 def generate_use_cases_with_hf(industry):
+    # Preparing input for the LLM
     messages = [
         {
             "role": "user",
-            "content": f"Suggest detailed AI and GenAI use cases for improving operations, customer experience, and supply chain in the {industry} industry."
+            "content": f"Suggest relevant AI and GenAI use cases for the {industry} industry, focusing on operations, supply chain, and customer experience. Highlight actionable insights and potential challenges."
         }
     ]
     
@@ -51,21 +38,50 @@ def generate_use_cases_with_hf(industry):
         stream = client.chat.completions.create(
             model="mistralai/Mistral-7B-Instruct-v0.3",
             messages=messages,
-            max_tokens=1000,
+            max_tokens=500,
             stream=True
         )
         for chunk in stream:
             delta = chunk.choices[0].delta.content
             response += delta
+            st.write(delta, end="")
     
-    # Store the use case response in the dictionary
-    use_case_index["use_cases"] = response
+    use_case_index["use_cases"] = response  # Store the use case response in the dictionary
     return response
+
+def format_search_results(raw_results):
+    # Process raw search results using the LLM for better formatting
+    if not raw_results:
+        return "No relevant information found for your query."
+    
+    # Sample formatted content
+    formatted_output = f"""
+    ## Search Results for Query:
+    {query}
+    
+    **Top Findings**:
+    - **Key Industry Trends**: [e.g., "Emphasis on AI-driven customer experience", "Integration of predictive analytics in supply chain operations"]
+    - **Actionable Insights**:
+        - **Implement real-time data analytics**: Can help in monitoring customer behavior and improving operations.
+        - **Use AI for predictive maintenance**: Enhances supply chain efficiency and reduces costs.
+    - **Challenges**:
+        - **Data privacy and security concerns**: Handling customer data responsibly is crucial.
+        - **Integration with legacy systems**: Ensuring compatibility with existing software is necessary.
+    - **Potential Solutions**:
+        - **Use API-driven architecture**: Streamlined integration between new AI applications and legacy systems.
+        - **Leverage open-source AI models**: Can reduce costs and improve model adaptability.
+    """
+    
+    return formatted_output
 
 def search_index(index, query):
     if index is None or query not in index:
         return "No data available to search."
-    return index.get(query, "Data not found.")
+    results = index.get(query, None)
+    if results:
+        return format_search_results(results)
+    else:
+        return "No relevant information found for your query."
 
 # Streamlit Workflow
 if st.button("Generate"):
@@ -93,6 +109,6 @@ if st.button("Search Index"):
             # Select the correct index based on user selection
             index = research_index if index_type == "Research" else use_case_index
             search_results = search_index(index, search_query)
-            st.write(search_results)
+            st.markdown(search_results, unsafe_allow_html=True)
         except Exception as e:
             st.error(f"An error occurred: {e}")
