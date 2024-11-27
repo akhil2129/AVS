@@ -22,13 +22,27 @@ query = f"{company} in {industry}"
 def research_industry_and_company(query):
     results = search.invoke(query)
     research_index["results"] = results  # Storing research results in a simple dictionary
-    return results
+    
+    # Using Hugging Face LLM to generate a more readable summary
+    messages = [
+        {"role": "user", "content": f"Summarize the following research findings for {company} in the {industry} industry."},
+        {"role": "assistant", "content": results}
+    ]
+    
+    with st.spinner("Generating research summary..."):
+        response = client.chat.completions.create(
+            model="mistralai/Mistral-7B-Instruct-v0.3",
+            messages=messages,
+            max_tokens=500
+        )
+        summary = response.choices[0].text.strip()
+    return summary
 
 def generate_use_cases_with_hf(industry):
     messages = [
         {
             "role": "user",
-            "content": f"Suggest relevant AI and GenAI use cases for the {industry} industry, focusing on operations, supply chain, and customer experience."
+            "content": f"Suggest detailed AI and GenAI use cases for improving operations, customer experience, and supply chain in the {industry} industry."
         }
     ]
     
@@ -37,15 +51,15 @@ def generate_use_cases_with_hf(industry):
         stream = client.chat.completions.create(
             model="mistralai/Mistral-7B-Instruct-v0.3",
             messages=messages,
-            max_tokens=500,
+            max_tokens=1000,
             stream=True
         )
         for chunk in stream:
             delta = chunk.choices[0].delta.content
             response += delta
-            st.write(delta, end="")
     
-    use_case_index["use_cases"] = response  # Store the use case response in the dictionary
+    # Store the use case response in the dictionary
+    use_case_index["use_cases"] = response
     return response
 
 def search_index(index, query):
