@@ -1,43 +1,14 @@
-# import streamlit as st
-# from langchain_community.tools import DuckDuckGoSearchRun
-
-# # Initialize DuckDuckGoSearchRun
-# search = DuckDuckGoSearchRun()
-
-# # Streamlit app
-# st.title("Search AI Companies in Hyderabad")
-
-# # Input field for search query
-# query = st.text_input("Enter your search query:", "AI Planet Company in Hyderabad")
-
-# # Button to trigger the search
-# if st.button("Search"):
-#     with st.spinner("Searching..."):
-#         try:
-#             # Invoke the search
-#             results = search.invoke(query)
-#             # Display results
-#             st.subheader("Search Results:")
-#             st.write(results)
-#         except Exception as e:
-#             st.error(f"An error occurred: {e}")
-
-# # Footer
-# st.caption("Powered by DuckDuckGo and LangChain Community Tools")
-
 import streamlit as st
 from langchain_community.tools import DuckDuckGoSearchRun
-from llama_index import GPTSimpleVectorIndex, Document
-
 from huggingface_hub import InferenceClient
 
 # Initialize DuckDuckGoSearchRun and Hugging Face client
 search = DuckDuckGoSearchRun()
 client = InferenceClient(api_key="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")
 
-# Initialize LlamaIndex instances
-research_index = None
-use_case_index = None
+# Dictionary to store indexed research and use cases
+research_index = {}
+use_case_index = {}
 
 # Streamlit App
 st.title("AI Use Case Generator with Hugging Face LLM")
@@ -50,9 +21,7 @@ query = f"{company} in {industry}"
 # Agent Workflow
 def research_industry_and_company(query):
     results = search.invoke(query)
-    documents = [Document(text=result) for result in results]
-    global research_index
-    research_index = VectorStoreIndex.from_documents(documents)  # Updated here
+    research_index["results"] = results  # Storing research results in a simple dictionary
     return results
 
 def generate_use_cases_with_hf(industry):
@@ -76,15 +45,13 @@ def generate_use_cases_with_hf(industry):
             response += delta
             st.write(delta, end="")
     
-    global use_case_index
-    use_case_index = VectorStoreIndex.from_documents([Document(text=response)])  # Updated here
+    use_case_index["use_cases"] = response  # Store the use case response in the dictionary
     return response
 
 def search_index(index, query):
-    if index is None:
+    if index is None or query not in index:
         return "No data available to search."
-    response = index.query(query)
-    return response.response
+    return index.get(query, "Data not found.")
 
 # Streamlit Workflow
 if st.button("Generate"):
@@ -109,6 +76,7 @@ search_query = st.text_input("Enter your search query:")
 if st.button("Search Index"):
     with st.spinner("Searching..."):
         try:
+            # Select the correct index based on user selection
             index = research_index if index_type == "Research" else use_case_index
             search_results = search_index(index, search_query)
             st.write(search_results)
