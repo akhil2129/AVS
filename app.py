@@ -25,13 +25,12 @@
 # # Footer
 # st.caption("Powered by DuckDuckGo and LangChain Community Tools")
 
-
 import streamlit as st
 from langchain_community.tools import DuckDuckGoSearchRun
-from llama_index import GPTSimpleVectorIndex, Document
+from llama_index import VectorStoreIndex, Document
 from huggingface_hub import InferenceClient
 
-# Initialize DuckDuckGoSearchRun and Hugging Face client with API key
+# Initialize DuckDuckGoSearchRun and Hugging Face client
 search = DuckDuckGoSearchRun()
 client = InferenceClient(api_key="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")
 
@@ -52,11 +51,10 @@ def research_industry_and_company(query):
     results = search.invoke(query)
     documents = [Document(text=result) for result in results]
     global research_index
-    research_index = GPTSimpleVectorIndex.from_documents(documents)
+    research_index = VectorStoreIndex.from_documents(documents)  # Updated here
     return results
 
 def generate_use_cases_with_hf(industry):
-    # Prepare input for the Hugging Face model
     messages = [
         {
             "role": "user",
@@ -64,7 +62,6 @@ def generate_use_cases_with_hf(industry):
         }
     ]
     
-    # Call the Hugging Face Inference API
     response = ""
     with st.spinner("Generating use cases with Hugging Face LLM..."):
         stream = client.chat.completions.create(
@@ -78,9 +75,8 @@ def generate_use_cases_with_hf(industry):
             response += delta
             st.write(delta, end="")
     
-    # Index the generated use cases
     global use_case_index
-    use_case_index = GPTSimpleVectorIndex.from_documents([Document(text=response)])
+    use_case_index = VectorStoreIndex.from_documents([Document(text=response)])  # Updated here
     return response
 
 def search_index(index, query):
@@ -93,12 +89,10 @@ def search_index(index, query):
 if st.button("Generate"):
     with st.spinner("Processing..."):
         try:
-            # Research Phase
             st.subheader("Industry and Company Research")
             research_results = research_industry_and_company(query)
             st.write(research_results)
             
-            # Use Case Generation
             st.subheader("AI Use Cases")
             use_cases = generate_use_cases_with_hf(industry)
             st.write(use_cases)
